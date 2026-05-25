@@ -15,14 +15,13 @@ permissions:
 jobs:
   tag:
     runs-on: ubuntu-latest
-    if: "!contains(toJson(github.event.commits.*.message), '[skip auto-tag]')"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.TAG_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Read plugin version from Directory.Build.props
         id: version
