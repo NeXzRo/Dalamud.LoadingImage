@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.TAG_TOKEN }}
 
       - name: Read plugin version from Directory.Build.props
         id: version
