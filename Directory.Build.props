@@ -1,4 +1,5 @@
-﻿<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+<Project>
   <PropertyGroup>
+    <Version>1.0.0.18</Version>
   </PropertyGroup>
 </Project>

@@ -1,0 +1,66 @@
+name: Auto-tag on version bump
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: auto-tag-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    if: "!contains(toJson(github.event.commits.*.message), '[skip auto-tag]')"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TAG_TOKEN }}
+
+      - name: Read plugin version from Directory.Build.props
+        id: version
+        run: |
+          version=$(grep -oP '<Version>\K[\d.]+(?=</Version>)' Directory.Build.props)
+          if [ -z "$version" ]; then
+            echo "::error::Could not parse <Version> from Directory.Build.props"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $version"
+
+      - name: Check whether tag already exists
+        id: check
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $tag already exists — nothing to do."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag $tag does not exist yet — will create."
+          fi
+
+      - name: Create and push tag
+        if: steps.check.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          if git push origin "$TAG"; then
+            echo "Pushed tag $TAG."
+          elif git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $2}' | grep -qx "refs/tags/$TAG"; then
+            echo "Tag $TAG was created by another run — nothing to do."
+          else
+            echo "::error::Failed to push tag $TAG"
+            exit 1
+          fi
